@@ -30,12 +30,28 @@ const openai = new OpenAI({
 });
 
 function normalizeArabic(text) {
+
   return text
+
+    // supprimer harakat
     .replace(/[ًٌٍَُِّْـ]/g, "")
+
+    // normaliser alifs
     .replace(/[آأإٱ]/g, "ا")
-    //.replace(/ى/g, "ي")
-    .replace(/[^\u0600-\u06FF\s]/g, "")
+
+    // normaliser espaces
     .replace(/\s+/g, " ")
+
+    // supprimer ponctuation arabe et française
+    .replace(/[.,!?;:،؛؟"'`~()[\]{}\-_/\\]/g, "")
+
+    // supprimer caractères invisibles
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+
+    // supprimer tout sauf arabe + espaces
+    .replace(/[^\u0600-\u06FF\s]/g, "")
+
+    // trim final
     .trim();
 }
 
