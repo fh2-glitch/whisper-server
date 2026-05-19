@@ -106,7 +106,7 @@ document.getElementById("start").onclick = async () => {
 
       result.innerHTML = "⏳ Reconnaissance en cours...";
 
-      const response = await fetch("http://localhost:3000/recognize", {
+      const response = await fetch("https://whisper-server-o4p8.onrender.com/recognize", {
         method: "POST",
         body: formData
       });
