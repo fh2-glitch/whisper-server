@@ -55,6 +55,10 @@ function normalizeArabic(text) {
     .trim();
 }
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 app.post("/recognize", upload.single("audio"), async (req, res) => {
   try {
     console.log("Fichier reçu :", req.file);
