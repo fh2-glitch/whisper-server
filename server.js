@@ -12,8 +12,6 @@ const app = express();
 app.use(cors());
 app.use(express.static("."));
 
-import path from "path";
-
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
@@ -105,7 +103,10 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
       file: fs.createReadStream(req.file.path),
       model: "whisper-1",
       language: "ar",
-      response_format: "text"
+      response_format: "text",
+      prompt: expectedList.length
+          ? `المتكلم سينطق كلمة أو عبارة عربية قصيرة. الإجابات المحتملة هي فقط: ${expectedList.join("، ")}`
+          : undefined
     });
 
     fs.unlinkSync(req.file.path);
