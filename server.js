@@ -141,11 +141,14 @@ let success = false;
 if (expectedList.length) {
   const result = findBestMatch(normalized, expectedList);
 
-  bestMatch = result.bestMatch;
   distance = result.distance;
 
-  // seuil à ajuster
-  success = distance <= 2;
+// seuil strict
+success = distance <= 2;
+
+// si ce n'est pas assez proche, on ne propose aucune cible
+bestMatch = success ? result.bestMatch : "";
+
 }
     //const target = normalizeArabic("أحب");
 
