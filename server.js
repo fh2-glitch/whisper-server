@@ -59,6 +59,61 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+function normalizeArabic(text) {
+  return text
+    .replace(/[ًٌٍَُِّْـ]/g, "")
+    .replace(/[آأإٱ]/g, "ا")
+    .replace(/[.,!?;:،؛؟"'`~()[\]{}\-_/\\]/g, "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshtein(a, b) {
+  const matrix = [];
+
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      matrix[i][j] =
+        b.charAt(i - 1) === a.charAt(j - 1)
+          ? matrix[i - 1][j - 1]
+          : Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+function findBestMatch(recognized, expectedList) {
+  const normalizedRecognized = normalizeArabic(recognized).replace(/\s/g, "");
+
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const expected of expectedList) {
+    const normalizedExpected = normalizeArabic(expected).replace(/\s/g, "");
+
+    const score = levenshtein(normalizedRecognized, normalizedExpected);
+
+    if (score < bestScore) {
+      bestScore = score;
+      best = expected;
+    }
+  }
+
+  return {
+    bestMatch: best,
+    distance: bestScore
+  };
+}
+
 app.post("/recognize", upload.single("audio"), async (req, res) => {
   try {
     const expectedList = JSON.parse(
@@ -83,14 +138,50 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     const text = transcription || "";
     const normalized = normalizeArabic(text);
-    const target = normalizeArabic("أحب");
+    const parasites = [
+  "شكرا على المشاهدة",
+  "اشتركوا في القناة",
+  "والى اللقاء في الحلقة القادمة",
+  "لا تنسوا الاشتراك"
+];
+
+const isParasite = parasites.some(p =>
+  normalized.includes(normalizeArabic(p))
+);
+
+if (isParasite) {
+  return res.json({
+    text,
+    normalized,
+    bestMatch: "",
+    success: false,
+    reason: "parasite"
+  });
+}
+
+let bestMatch = "";
+let distance = null;
+let success = false;
+
+if (expectedList.length) {
+  const result = findBestMatch(normalized, expectedList);
+
+  bestMatch = result.bestMatch;
+  distance = result.distance;
+
+  // seuil à ajuster
+  success = distance <= 2;
+}
+    //const target = normalizeArabic("أحب");
 
     res.json({
       text,
-      normalized
-      //success: normalized === target
+      normalized,
+      bestMatch,
+      distance,
+      success
     });
-
+    
   } catch (error) {
     console.error("ERREUR COMPLÈTE :", error);
 
