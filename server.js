@@ -61,6 +61,11 @@ app.get("/health", (req, res) => {
 
 app.post("/recognize", upload.single("audio"), async (req, res) => {
   try {
+    const expectedList = JSON.parse(
+      req.body.expectedList || "[]"
+    );
+
+    console.log("Liste attendue :", expectedList);
     console.log("Fichier reçu :", req.file);
 
     if (!req.file) {
