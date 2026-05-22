@@ -1,3 +1,4 @@
+//import path from "path";
 import express from "express";
 import multer from "multer";
 import cors from "cors";
@@ -11,11 +12,13 @@ const app = express();
 app.use(cors());
 app.use(express.static("."));
 
+import path from "path";
+
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-    cb(null, Date.now() + ".wav");
-  }
+  cb(null, Date.now() + ".wav");
+}
 });
 
 const upload = multer({ storage });
@@ -27,58 +30,29 @@ const openai = new OpenAI({
 });
 
 function normalizeArabic(text) {
+
   return text
+
+    // supprimer harakat
     .replace(/[ًٌٍَُِّْـ]/g, "")
+
+    // normaliser alifs
     .replace(/[آأإٱ]/g, "ا")
-    .replace(/[.,!?;:،؛؟"'`~()[\]{}\-_/\\]/g, "")
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .replace(/[^\u0600-\u06FF\s]/g, "")
+
+    // normaliser espaces
     .replace(/\s+/g, " ")
+
+    // supprimer ponctuation arabe et française
+    .replace(/[.,!?;:،؛؟"'`~()[\]{}\-_/\\]/g, "")
+
+    // supprimer caractères invisibles
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+
+    // supprimer tout sauf arabe + espaces
+    .replace(/[^\u0600-\u06FF\s]/g, "")
+
+    // trim final
     .trim();
-}
-
-function levenshtein(a, b) {
-  const matrix = [];
-
-  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      matrix[i][j] =
-        b.charAt(i - 1) === a.charAt(j - 1)
-          ? matrix[i - 1][j - 1]
-          : Math.min(
-              matrix[i - 1][j - 1] + 1,
-              matrix[i][j - 1] + 1,
-              matrix[i - 1][j] + 1
-            );
-    }
-  }
-
-  return matrix[b.length][a.length];
-}
-
-function findBestMatch(recognized, expectedList) {
-  const normalizedRecognized = normalizeArabic(recognized).replace(/\s/g, "");
-
-  let best = "";
-  let bestScore = Infinity;
-
-  for (const expected of expectedList) {
-    const normalizedExpected = normalizeArabic(expected).replace(/\s/g, "");
-    const score = levenshtein(normalizedRecognized, normalizedExpected);
-
-    if (score < bestScore) {
-      bestScore = score;
-      best = expected;
-    }
-  }
-
-  return {
-    bestMatch: best,
-    distance: bestScore
-  };
 }
 
 app.get("/health", (req, res) => {
@@ -87,15 +61,15 @@ app.get("/health", (req, res) => {
 
 app.post("/recognize", upload.single("audio"), async (req, res) => {
   try {
-    const expectedList = JSON.parse(req.body.expectedList || "[]");
+    const expectedList = JSON.parse(
+      req.body.expectedList || "[]"
+    );
 
     console.log("Liste attendue :", expectedList);
     console.log("Fichier reçu :", req.file);
 
     if (!req.file) {
-      return res.status(400).json({
-        error: "Aucun fichier audio reçu."
-      });
+      return res.status(400).json({ error: "Aucun fichier audio reçu." });
     }
 
     const transcription = await openai.audio.transcriptions.create({
@@ -109,63 +83,12 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     const text = transcription || "";
     const normalized = normalizeArabic(text);
-
-    const parasites = [
-      "شكرا على المشاهدة",
-      "اشتركوا في القناة",
-      "والى اللقاء في الحلقة القادمة",
-      "لا تنسوا الاشتراك"
-    ];
-
-    const isParasite = parasites.some(p =>
-      normalized.includes(normalizeArabic(p))
-    );
-
-    if (isParasite) {
-      return res.json({
-        text,
-        normalized,
-        bestMatch: "",
-        distance: null,
-        success: false,
-        reason: "parasite"
-      });
-    }
-
-    const normalizedExpectedJoined = normalizeArabic(expectedList.join(" "));
-
-    if (
-      expectedList.length &&
-      normalized === normalizedExpectedJoined
-    ) {
-      return res.json({
-        text,
-        normalized,
-        bestMatch: "",
-        distance: null,
-        success: false,
-        reason: "prompt_echo"
-      });
-    }
-
-    let bestMatch = "";
-    let distance = null;
-    let success = false;
-
-    if (expectedList.length) {
-      const result = findBestMatch(normalized, expectedList);
-
-      distance = result.distance;
-      success = distance <= 2;
-      bestMatch = success ? result.bestMatch : "";
-    }
+    const target = normalizeArabic("أحب");
 
     res.json({
       text,
-      normalized,
-      bestMatch,
-      distance,
-      success
+      normalized
+      //success: normalized === target
     });
 
   } catch (error) {
