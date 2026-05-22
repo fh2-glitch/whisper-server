@@ -89,6 +89,7 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     let distance = null;
     let errorRate = null;
+    let errorPercent = null;
 
     if (expected) {
       distance = levenshtein(
@@ -96,14 +97,16 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
       expected.replace(/\s/g, "")
     );
 
-    errorRate = distance / Math.max(expected.length, 1);
+    errorRate = Number((distance / Math.max(expected.length, 1)).toFixed(2));
+    errorPercent = errorRate !== null ? Math.round(errorRate * 100) : null;
     }
     res.json({
       text,
       normalized,
       expected,
       distance,
-      errorRate
+      errorRate,
+      errorPercent
     });
     
   } catch (error) {
