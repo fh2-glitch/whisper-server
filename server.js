@@ -41,6 +41,28 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+function levenshtein(a, b) {
+  const matrix = [];
+
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      matrix[i][j] =
+        b[i - 1] === a[j - 1]
+          ? matrix[i - 1][j - 1]
+          : Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
 app.post("/recognize", upload.single("audio"), async (req, res) => {
   try {
     console.log("Fichier reçu :", req.file);
@@ -63,12 +85,27 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     const text = transcription || "";
     const normalized = normalizeArabic(text);
+    const expected = normalizeArabic(req.body.expected || "");
 
+    let distance = null;
+    let errorRate = null;
+
+    if (expected) {
+      distance = levenshtein(
+      normalized.replace(/\s/g, ""),
+      expected.replace(/\s/g, "")
+    );
+
+    errorRate = distance / Math.max(expected.length, 1);
+    }
     res.json({
       text,
-      normalized
+      normalized,
+      expected,
+      distance,
+      errorRate
     });
-
+    
   } catch (error) {
     console.error("ERREUR COMPLÈTE :", error);
 
