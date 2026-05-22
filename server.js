@@ -1,4 +1,3 @@
-//import path from "path";
 import express from "express";
 import multer from "multer";
 import cors from "cors";
@@ -12,13 +11,11 @@ const app = express();
 app.use(cors());
 app.use(express.static("."));
 
-import path from "path";
-
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-  cb(null, Date.now() + ".wav");
-}
+    cb(null, Date.now() + ".wav");
+  }
 });
 
 const upload = multer({ storage });
@@ -30,28 +27,13 @@ const openai = new OpenAI({
 });
 
 function normalizeArabic(text) {
-
   return text
-
-    // supprimer harakat
     .replace(/[ًٌٍَُِّْـ]/g, "")
-
-    // normaliser alifs
     .replace(/[آأإٱ]/g, "ا")
-
-    // normaliser espaces
     .replace(/\s+/g, " ")
-
-    // supprimer ponctuation arabe et française
     .replace(/[.,!?;:،؛؟"'`~()[\]{}\-_/\\]/g, "")
-
-    // supprimer caractères invisibles
     .replace(/[\u200B-\u200D\uFEFF]/g, "")
-
-    // supprimer tout sauf arabe + espaces
     .replace(/[^\u0600-\u06FF\s]/g, "")
-
-    // trim final
     .trim();
 }
 
@@ -60,11 +42,13 @@ app.get("/health", (req, res) => {
 });
 
 app.post("/recognize", upload.single("audio"), async (req, res) => {
-  
+  try {
     console.log("Fichier reçu :", req.file);
 
     if (!req.file) {
-      return res.status(400).json({ error: "Aucun fichier audio reçu." });
+      return res.status(400).json({
+        error: "Aucun fichier audio reçu."
+      });
     }
 
     const transcription = await openai.audio.transcriptions.create({
@@ -78,12 +62,10 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     const text = transcription || "";
     const normalized = normalizeArabic(text);
-    const target = normalizeArabic("أحب");
 
     res.json({
       text,
       normalized
-      //success: normalized === target
     });
 
   } catch (error) {
