@@ -53,9 +53,10 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(req.file.path),
-      model: "gpt-4o-mini-transcribe",
+      model: "gpt-4o-transcribe",
       language: "ar",
-      response_format: "text"
+      response_format: "text",
+      prompt: "Transcris uniquement la parole arabe entendue. Si le son n'est pas clair, ne devine pas."
     });
 
     fs.unlinkSync(req.file.path);
