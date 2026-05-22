@@ -53,7 +53,7 @@ app.post("/recognize", upload.single("audio"), async (req, res) => {
 
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(req.file.path),
-      model: "whisper-1",
+      model: "gpt-4o-mini-transcribe",
       language: "ar",
       response_format: "text"
     });
